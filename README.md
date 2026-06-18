@@ -355,12 +355,6 @@ trains ArbNet and verifies zero violations.
 - **Bell-shaped time value.** A difference-of-cones extension is sketched in
   §9.4 of the paper and left to follow-up work.
 
-## License
-
-Code is released under the MIT License (see [LICENSE](LICENSE)). The bundled
-market data remains the property of its sources (NSE, RBI, MoSPI, and others)
-and is redistributed only for academic reproducibility. The accompanying
-manuscript is © the authors; please cite once published.
 
 ## References
 
@@ -378,3 +372,7 @@ manuscript is © the authors; please cite once published.
 - Diebold, F. X., Mariano, R. S. (1995). *Comparing predictive accuracy*.
   Journal of Business & Economic Statistics 13(3).
 - Roper, M. (2010). *Arbitrage-free implied volatility surfaces*. Preprint.
+
+## Data
+
+The data used in the code is available at: https://drive.google.com/drive/folders/1EsE8aWJJKWURlFMOSTcY9WGQZHwrYOy9?usp=drive_link
