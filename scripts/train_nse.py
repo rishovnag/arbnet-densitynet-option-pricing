@@ -109,6 +109,7 @@ from arbnet.models import (ArbNet, AckererSoftPenaltyNet, BlackScholesPricer,
 from arbnet.utils import default_arbnet_config, RunConfig, set_seed
 from arbnet.train import train_pricer
 from arbnet.arbitrage import static_arbitrage_report, adversarial_arbitrage_report
+from arbnet.arbitrage.full_compliance import full_compliance_report
 from arbnet.eval import (rmse, hedge_pnl_stats, bootstrap_ci,
                          moving_block_bootstrap_ci, diebold_mariano)
 from arbnet.hedging import hedge_pnl_delta
@@ -339,8 +340,8 @@ def _grid_eval(model, K_grid, T_grid, S0, r, q, ctx_vec: Optional[np.ndarray]):
     return price.view(n_T, n_K), w.view(n_T, n_K)
 
 
-def _evaluate(model, feats: dict, snap, name: str, ctx_vec: Optional[np.ndarray]) -> Dict:
-    """In-sample price/IV fit + static-arbitrage compliance for one trained model."""
+def _fit_metrics(model, feats: dict) -> Dict:
+    """Price/IV/vega-weighted fit metrics of a trained model on one cross-section."""
     with torch.no_grad():
         out = model(feats["K"], feats["T"], feats["S"], feats["r"],
                     feats.get("q"), feats.get("context"))
@@ -374,6 +375,29 @@ def _evaluate(model, feats: dict, snap, name: str, ctx_vec: Optional[np.ndarray]
             vega_weighted_rmse = float(
                 (((out["price"] - feats["price"])[ok] / vega[ok]) ** 2).mean().sqrt().item()
             )
+    return {"price_rmse": price_rmse, "iv_rmse": iv_rmse,
+            "vega_weighted_rmse": vega_weighted_rmse}
+
+
+def _evaluate(model, feats: dict, snap, name: str, ctx_vec: Optional[np.ndarray],
+              feats_eval: Optional[dict] = None) -> Dict:
+    """Fit metrics + static-arbitrage compliance for one trained model.
+
+    Without ``feats_eval`` the fit metrics are in-sample on the training
+    cross-section ``feats`` (legacy behaviour). With ``feats_eval`` (the
+    held-out half of an odd/even strike split) the PRIMARY metrics are
+    out-of-sample on ``feats_eval`` and the in-sample metrics are kept
+    alongside under ``*_insample``. Compliance grids are parameter-level and
+    unaffected by the split.
+    """
+    if feats_eval is not None:
+        m = _fit_metrics(model, feats_eval)
+        m_in = _fit_metrics(model, feats)
+        m["price_rmse_insample"] = m_in["price_rmse"]
+        m["iv_rmse_insample"] = m_in["iv_rmse"]
+        m["vega_weighted_rmse_insample"] = m_in["vega_weighted_rmse"]
+    else:
+        m = _fit_metrics(model, feats)
 
     T_grid = torch.tensor(
         sorted({round(float(t), 6) for t in feats["T"].tolist()}), dtype=torch.float32,
@@ -387,16 +411,15 @@ def _evaluate(model, feats: dict, snap, name: str, ctx_vec: Optional[np.ndarray]
         C_grid=C_grid, w_grid=w_grid, K_grid=K_grid, T_grid=T_grid, k_grid=k_grid,
         r=float(snap.risk_free_rate), q=float(snap.dividend_yield),
     )
-    return {
+    rec = {
         "model": name,
-        "price_rmse": price_rmse,
-        "iv_rmse": iv_rmse,
-        "vega_weighted_rmse": vega_weighted_rmse,
         "butterfly_rate": rep.butterfly_rate,
         "calendar_rate": rep.calendar_rate,
         "tail_rate": rep.tail_rate,
         "total_rate": rep.total_rate,
     }
+    rec.update(m)
+    return rec
 
 
 # A hedge run is only meaningful when the model's ATM implied vol is a sane
@@ -485,14 +508,90 @@ def _attach_adversarial(rec: Dict, model, feats, snap, ctx_vec) -> Dict:
     return rec
 
 
-def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict]:
-    """Train one model on a day's features and return its evaluation record."""
+def _attach_full_compliance(rec: Dict, model, feats, snap, ctx_vec) -> Dict:
+    """Attach the FULL static no-arbitrage compliance report (the conditions
+    OUTSIDE the (A1)-(A4) certificate: strike monotonicity, the call-spread /
+    digital bound, the covered-call upper envelope, and the K->0 boundary),
+    bucketed by moneyness on an extended grid K/S in [1e-3, 4].
+
+    Prop. `incompleteness' in the manuscript predicts in-band violations for
+    ArbNet wherever the fitted time value is non-trivial, and full-list
+    compliance for DensityNet / BS; this diagnostic measures both.
+    """
+    T_fc = torch.tensor(
+        sorted({round(float(t), 6) for t in feats["T"].tolist()}), dtype=torch.float64,
+    )
+    ctx_row = (torch.tensor(ctx_vec, dtype=torch.float64).view(1, -1)
+               if ctx_vec is not None else None)
+    rep = full_compliance_report(
+        model, S=float(snap.spot), r=float(snap.risk_free_rate),
+        q=float(snap.dividend_yield), T_grid=T_fc, context=ctx_row,
+    )
+    rec.update(rep.as_record())
+    rec["full_clean_in_band"] = bool(rep.clean_in_band)
+    rec["full_clean_everywhere"] = bool(rep.clean_everywhere)
+    return rec
+
+
+def _save_params(model, save_dir: str, date_str: str, name: str, snap, ctx_vec) -> None:
+    """Checkpoint the fitted per-day parameters so future diagnostic passes can
+    re-instantiate models WITHOUT refitting (the absence of these checkpoints
+    is what forced the 2026-08 diagnostic to be a refit sweep)."""
+    os.makedirs(save_dir, exist_ok=True)
+    torch.save({
+        "model": name,
+        "date": date_str,
+        "state_dict": model.state_dict(),
+        "spot": float(snap.spot),
+        "risk_free_rate": float(snap.risk_free_rate),
+        "dividend_yield": float(snap.dividend_yield),
+        "context": (None if ctx_vec is None else np.asarray(ctx_vec, dtype=np.float32)),
+    }, os.path.join(save_dir, f"{date_str}_{name}.pt"))
+
+
+def _subset_feats(feats: dict, idx: np.ndarray) -> dict:
+    """Row-subset every per-quote tensor in a features dict."""
+    n_ref = feats["K"].size(0)
+    idx_t = torch.as_tensor(idx, dtype=torch.long)
+    out = {}
+    for k, v in feats.items():
+        if torch.is_tensor(v) and v.dim() >= 1 and v.size(0) == n_ref:
+            out[k] = v[idx_t]
+        else:
+            out[k] = v
+    return out
+
+
+def _holdout_split(feats: dict):
+    """Deterministic odd/even strike split of one day's cross-section.
+
+    Quotes are ranked by (T, K); odd ranks form the TRAINING set, even ranks
+    the EVALUATION set. The split is alternating within each maturity slice,
+    so both halves span the full moneyness range and every maturity.
+    """
+    T = feats["T"].detach().cpu().numpy()
+    K = feats["K"].detach().cpu().numpy()
+    order = np.lexsort((K, T))
+    ranks = np.empty_like(order)
+    ranks[order] = np.arange(len(order))
+    train_idx = np.where(ranks % 2 == 1)[0]
+    eval_idx = np.where(ranks % 2 == 0)[0]
+    return _subset_feats(feats, train_idx), _subset_feats(feats, eval_idx), len(train_idx), len(eval_idx)
+
+
+def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed,
+                    feats_eval=None, save_dir=None, date_str=None) -> Optional[Dict]:
+    """Train one model on a day's features and return its evaluation record.
+
+    ``feats`` is the TRAINING cross-section (the odd half under
+    ``--holdout odd_even``); ``feats_eval`` the held-out half, if any.
+    """
     if name == "arbnet":
         ctx_dim = feats["context"].shape[1] if "context" in feats else 0
         model = ArbNet(default_arbnet_config(context_dim=ctx_dim))
         cfg = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2, lambda_iv=0.0)
         train_pricer(model, feats, cfg, verbose=False)
-        rec = _evaluate(model, feats, snap, "arbnet", ctx_vec)
+        rec = _evaluate(model, feats, snap, "arbnet", ctx_vec, feats_eval=feats_eval)
         # Adversarial re-check for the PLAIN model too (H6): butterfly, A4 and
         # fixed-strike calendar must be exactly clean (they are guaranteed);
         # the fixed-forward-moneyness calendar count is monitored disclosure.
@@ -508,7 +607,7 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict
         model = ArbNet(cfg_net)
         cfg = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2, lambda_iv=0.0)
         train_pricer(model, feats, cfg, verbose=False)
-        rec = _evaluate(model, feats, snap, "arbnet_bump", ctx_vec)
+        rec = _evaluate(model, feats, snap, "arbnet_bump", ctx_vec, feats_eval=feats_eval)
         rec = _attach_adversarial(rec, model, feats, snap, ctx_vec)
     elif name == "arbnet_density":
         # Martingale lognormal-mixture density net: A1-A4 arbitrage-free BY
@@ -517,7 +616,7 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict
         model = DensityNet(DensityNetConfig(context_dim=ctx_dim, n_components=8))
         cfg = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2, lambda_iv=0.0)
         train_pricer(model, feats, cfg, verbose=False)
-        rec = _evaluate(model, feats, snap, "arbnet_density", ctx_vec)
+        rec = _evaluate(model, feats, snap, "arbnet_density", ctx_vec, feats_eval=feats_eval)
         rec = _attach_adversarial(rec, model, feats, snap, ctx_vec)
     elif name == "ackerer":
         model = AckererSoftPenaltyNet()  # context-free baseline
@@ -529,7 +628,7 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict
         )
         train_pricer(model, feats, cfg, soft_penalty_grid={"K_grid": K_pen, "T_grid": T_pen},
                      verbose=False)
-        rec = _evaluate(model, feats, snap, "ackerer", None)
+        rec = _evaluate(model, feats, snap, "ackerer", None, feats_eval=feats_eval)
     elif name == "ackerer_matched":
         # Capacity- and context-matched Ackerer: same 10-feature context as ArbNet
         # and ~35k params (vs ArbNet ~33-43k), so a fit gap can be attributed to
@@ -544,15 +643,23 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict
         )
         train_pricer(model, feats, cfg, soft_penalty_grid={"K_grid": K_pen, "T_grid": T_pen},
                      verbose=False)
-        rec = _evaluate(model, feats, snap, "ackerer_matched", ctx_vec)
+        rec = _evaluate(model, feats, snap, "ackerer_matched", ctx_vec, feats_eval=feats_eval)
     elif name == "bs":
         model = BlackScholesPricer()
         cfg = RunConfig(seed=0, n_epochs=min(n_epochs, 80), batch_size=64, lr=2e-2,
                         lambda_iv=0.0)
         train_pricer(model, feats, cfg, verbose=False)
-        rec = _evaluate(model, feats, snap, "bs", None)
+        rec = _evaluate(model, feats, snap, "bs", None, feats_eval=feats_eval)
     else:
         raise ValueError(f"unknown model {name}")
+    # Extended full-list compliance diagnostic (cheap: one float64 grid pass).
+    # Context goes only to the context-aware models -- the plain ackerer and bs
+    # forwards are context-free (passing ctx to them is a shape error).
+    ctx_for_model = (ctx_vec if name in ("arbnet", "arbnet_bump",
+                                         "ackerer_matched", "arbnet_density") else None)
+    rec = _attach_full_compliance(rec, model, feats, snap, ctx_for_model)
+    if save_dir is not None and date_str is not None:
+        _save_params(model, save_dir, date_str, name, snap, ctx_for_model)
     rec.update(_hedge_eval(
         model, snap,
         ctx_vec if name in ("arbnet", "arbnet_bump", "ackerer_matched", "arbnet_density") else None, seed))
@@ -563,7 +670,7 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed) -> Optional[Dict
 # Study driver
 # =============================================================================
 def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
-        resume=False, macro_flat_lags=False) -> Dict:
+        resume=False, macro_flat_lags=False, holdout="none", save_params=None) -> Dict:
     set_seed(seed)
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     _real_data.reset_fallback_counters()
@@ -648,16 +755,44 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
         days_used += 1
         line = [f"  [{date.date()}] n={n:3d} S={snap.spot:9.1f} "
                 f"r={snap.risk_free_rate:.4f} q={snap.dividend_yield:.4f} |"]
+        # Held-out odd/even strike split (per-day, deterministic): train on odd
+        # (T, K)-ranked quotes, evaluate on even. Splits are computed once per
+        # day on the SAME cross-section every model sees.
+        splits = {}
+        n_train = n_eval = 0
+        if holdout == "odd_even":
+            tr_b, ev_b, n_train, n_eval = _holdout_split(feats_base)
+            splits["base"] = (tr_b, ev_b)
+            if ctx_dim > 0:
+                tr_a, ev_a, _, _ = _holdout_split(feats_arb)
+                splits["arb"] = (tr_a, ev_a)
+            else:
+                splits["arb"] = (tr_b, ev_b)
+            if n_train < max(15, min_options // 2):
+                reason = f"holdout train half only {n_train} quotes"
+                print(f"  [{date.date()}] SKIP -- {reason}")
+                skipped.append({"date": str(date.date()), "reason": reason})
+                days_used -= 1
+                continue
         for name in models:
             if (str(date.date()), name) in have:
                 continue   # already computed in a previous run -- do not retrain
-            feats = feats_arb if name in ("arbnet", "arbnet_bump", "ackerer_matched", "arbnet_density") else feats_base
+            uses_ctx = name in ("arbnet", "arbnet_bump", "ackerer_matched", "arbnet_density")
+            if holdout == "odd_even":
+                feats, feats_ev = splits["arb" if uses_ctx else "base"]
+            else:
+                feats = feats_arb if uses_ctx else feats_base
+                feats_ev = None
             try:
-                rec = _train_eval_day(name, feats, filtered, ctx_vec, n_epochs, seed + di)
+                rec = _train_eval_day(name, feats, filtered, ctx_vec, n_epochs, seed + di,
+                                      feats_eval=feats_ev, save_dir=save_params,
+                                      date_str=str(date.date()))
             except Exception as e:
                 print(f"  [{date.date()}] {name} FAILED: {e}")
                 continue
             n_trained += 1
+            if holdout == "odd_even":
+                rec.update({"n_train": int(n_train), "n_eval": int(n_eval)})
             rec.update({
                 "date": str(date.date()), "n_options": int(n),
                 "spot": float(snap.spot),
@@ -701,6 +836,14 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
             "iv_rmse_mean": float(np.nanmean([r["iv_rmse"] for r in recs])),
             "vega_weighted_rmse_mean": float(np.nanmean(
                 [r.get("vega_weighted_rmse", float("nan")) for r in recs])),
+            # in-sample companions (present only under --holdout odd_even;
+            # the primary price/iv/vega fields are then OUT-OF-SAMPLE):
+            "price_rmse_insample_mean": float(np.nanmean(
+                [r.get("price_rmse_insample", float("nan")) for r in recs])),
+            "iv_rmse_insample_mean": float(np.nanmean(
+                [r.get("iv_rmse_insample", float("nan")) for r in recs])),
+            "vega_weighted_rmse_insample_mean": float(np.nanmean(
+                [r.get("vega_weighted_rmse_insample", float("nan")) for r in recs])),
             # adversarial finer-grid diagnostic (present for arbnet / bump /
             # density records; NaN-safe zero otherwise):
             "adv_butterfly_days": int(sum(
@@ -721,6 +864,22 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
             # monitored only -- NOT architecturally enforced:
             "monitored_tail_rate_mean": float(np.mean([r["tail_rate"] for r in recs])),
             "monitored_tail_rate_max": float(np.max([r["tail_rate"] for r in recs])),
+            # full-list (beyond-A1..A4) compliance: strike monotonicity,
+            # digital bound, upper envelope, K->0 boundary -- by moneyness bucket
+            "full_mono_inband_days": int(sum(
+                1 for r in recs if r.get("full_mono_inband", 0) > 0)),
+            "full_digital_inband_days": int(sum(
+                1 for r in recs if r.get("full_digital_inband", 0) > 0)),
+            "full_upper_inband_days": int(sum(
+                1 for r in recs if r.get("full_upper_inband", 0) > 0)),
+            "full_clean_inband_days": int(sum(
+                1 for r in recs if r.get("full_clean_in_band", False))),
+            "full_clean_everywhere_days": int(sum(
+                1 for r in recs if r.get("full_clean_everywhere", False))),
+            "full_boundary_gap_rel_worst_max": float(np.max(
+                [r.get("full_boundary_gap_rel_worst", float("nan")) for r in recs])),
+            "full_first_bite_K_over_S_min": (lambda v: float(np.nanmin(v)) if np.isfinite(v).any() else float("nan"))(
+                np.array([r.get("full_first_bite_K_over_S_min", float("nan")) for r in recs], dtype=float)),
             "hedge_std_mean": float(np.nanmean(hstd_arr)),
             "hedge_cvar95_mean": float(np.nanmean(hcv_arr)),
             "hedge_n_valid": int(np.isfinite(hstd_arr).sum()),
@@ -802,6 +961,7 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
                    "models": agg_models, "models_requested": models,
                    "n_epochs": n_epochs, "seed": seed,
                    "use_context": use_context,
+                   "holdout": holdout, "save_params": save_params,
                    "resume": resume, "n_records_reused": n_reused,
                    "n_records_trained": n_trained},
         "context_features": ctx_features,
@@ -859,6 +1019,15 @@ def main():
                         "shipped calendar. Only for bit-for-bit reproduction of "
                         "pre-H4 result files (e.g. the Stage-1 determinism check).")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--holdout", type=str, default="none", choices=["none", "odd_even"],
+                   help="odd_even: per-day held-out strike split -- fit on odd "
+                        "(T,K)-ranked quotes, evaluate on even; primary price/IV/"
+                        "vega metrics become OUT-OF-SAMPLE and the in-sample "
+                        "values are kept alongside as *_insample")
+    p.add_argument("--save_params", type=str, default=None,
+                   help="directory for per-(day, model) parameter checkpoints, "
+                        "so later diagnostic passes can re-instantiate models "
+                        "without refitting")
     p.add_argument("--out", type=str, default="results/nse_study.json")
     args = p.parse_args()
 
@@ -889,7 +1058,8 @@ def main():
 
     summary = run(dates, args.models, args.n_epochs, args.min_options,
                   not args.no_context, args.out, args.seed, resume=args.resume,
-                  macro_flat_lags=args.macro_flat_lags)
+                  macro_flat_lags=args.macro_flat_lags, holdout=args.holdout,
+                  save_params=args.save_params)
 
     print("\n=== Aggregate (real NSE Nifty 50 data) ===")
     dq = summary["data_quality"]
