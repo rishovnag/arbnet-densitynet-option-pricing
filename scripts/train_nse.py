@@ -579,6 +579,19 @@ def _holdout_split(feats: dict):
     return _subset_feats(feats, train_idx), _subset_feats(feats, eval_idx), len(train_idx), len(eval_idx)
 
 
+def _density_diag(model, feats: dict) -> Dict:
+    """Per-day mixing-law diagnostics for the density family: fitted
+    V_m = Var(log m(theta)) (the additive short-end total-variance offset the
+    fixed-mean design carries) and, when the skew clock is on, beta and h(1w).
+    Prefixed ``density_`` in the record; NaN-safe no-op on failure."""
+    try:
+        ctx_t = feats.get("context")
+        diag = model.mixture_diagnostics(ctx_t[:1] if ctx_t is not None else None)
+        return {f"density_{k}": float(v) for k, v in diag.items()}
+    except Exception:
+        return {}
+
+
 def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed,
                     feats_eval=None, save_dir=None, date_str=None) -> Optional[Dict]:
     """Train one model on a day's features and return its evaluation record.
@@ -618,6 +631,22 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed,
         train_pricer(model, feats, cfg, verbose=False)
         rec = _evaluate(model, feats, snap, "arbnet_density", ctx_vec, feats_eval=feats_eval)
         rec = _attach_adversarial(rec, model, feats, snap, ctx_vec)
+        rec.update(_density_diag(model, feats))
+    elif name == "arbnet_density_skew":
+        # DensityNet with the SKEW CLOCK (v4): m_i(T) = 1 + h(T)(m_i - 1),
+        # h(T) = 1 - e^{-beta T}. Same A1/A2/A4 guarantee (the mixing law at T
+        # is a dilation of the fixed law about its mean 1, so the convex order
+        # in T is preserved by the same two-stage argument), PLUS an exact
+        # expiry kink (m(0) degenerate at 1) and no short-dated Var(log m)
+        # total-variance offset -- the candidate fix for the short-end IV gap.
+        ctx_dim = feats["context"].shape[1] if "context" in feats else 0
+        model = DensityNet(DensityNetConfig(context_dim=ctx_dim, n_components=8,
+                                            skew_clock=True))
+        cfg = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2, lambda_iv=0.0)
+        train_pricer(model, feats, cfg, verbose=False)
+        rec = _evaluate(model, feats, snap, "arbnet_density_skew", ctx_vec, feats_eval=feats_eval)
+        rec = _attach_adversarial(rec, model, feats, snap, ctx_vec)
+        rec.update(_density_diag(model, feats))
     elif name == "ackerer":
         model = AckererSoftPenaltyNet()  # context-free baseline
         cfg = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2,
@@ -655,14 +684,15 @@ def _train_eval_day(name, feats, snap, ctx_vec, n_epochs, seed,
     # Extended full-list compliance diagnostic (cheap: one float64 grid pass).
     # Context goes only to the context-aware models -- the plain ackerer and bs
     # forwards are context-free (passing ctx to them is a shape error).
-    ctx_for_model = (ctx_vec if name in ("arbnet", "arbnet_bump",
-                                         "ackerer_matched", "arbnet_density") else None)
+    ctx_for_model = (ctx_vec if name in ("arbnet", "arbnet_bump", "ackerer_matched",
+                                         "arbnet_density", "arbnet_density_skew") else None)
     rec = _attach_full_compliance(rec, model, feats, snap, ctx_for_model)
     if save_dir is not None and date_str is not None:
         _save_params(model, save_dir, date_str, name, snap, ctx_for_model)
     rec.update(_hedge_eval(
         model, snap,
-        ctx_vec if name in ("arbnet", "arbnet_bump", "ackerer_matched", "arbnet_density") else None, seed))
+        ctx_vec if name in ("arbnet", "arbnet_bump", "ackerer_matched",
+                            "arbnet_density", "arbnet_density_skew") else None, seed))
     return rec
 
 
@@ -777,7 +807,8 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
         for name in models:
             if (str(date.date()), name) in have:
                 continue   # already computed in a previous run -- do not retrain
-            uses_ctx = name in ("arbnet", "arbnet_bump", "ackerer_matched", "arbnet_density")
+            uses_ctx = name in ("arbnet", "arbnet_bump", "ackerer_matched",
+                                "arbnet_density", "arbnet_density_skew")
             if holdout == "odd_even":
                 feats, feats_ev = splits["arb" if uses_ctx else "base"]
             else:
@@ -884,6 +915,18 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
             "hedge_cvar95_mean": float(np.nanmean(hcv_arr)),
             "hedge_n_valid": int(np.isfinite(hstd_arr).sum()),
         }
+        # Density-family mixing-law diagnostics (fitted V_m = Var(log m(theta));
+        # skew-clock beta / h(1w)) -- present only for density records.
+        vm = np.array([r.get("density_V_m", float("nan")) for r in recs], dtype=float)
+        if np.isfinite(vm).any():
+            a["density_V_m_mean"] = float(np.nanmean(vm))
+            a["density_V_m_median"] = float(np.nanmedian(vm))
+            a["density_V_m_p90"] = float(np.nanpercentile(vm, 90))
+        bet = np.array([r.get("density_beta", float("nan")) for r in recs], dtype=float)
+        if np.isfinite(bet).any():
+            a["density_beta_median"] = float(np.nanmedian(bet))
+            h1w = np.array([r.get("density_h_1w", float("nan")) for r in recs], dtype=float)
+            a["density_h_1w_median"] = float(np.nanmedian(h1w))
         # Bootstrap 95% CIs on the per-model means. Daily RMSE series are
         # serially correlated (overlapping cross-sections), so the MOVING-BLOCK
         # bootstrap is the primary CI (consistent with the HAC-corrected DM
@@ -944,7 +987,11 @@ def run(dates, models, n_epochs, min_options, use_context, out_path, seed,
                  ("arbnet_bump", "arbnet"), ("arbnet_bump", "ackerer"), ("arbnet_bump", "bs"),
                  ("ackerer_matched", "arbnet"), ("ackerer_matched", "ackerer"), ("ackerer_matched", "bs"),
                  ("arbnet_density", "arbnet"), ("arbnet_density", "ackerer"),
-                 ("arbnet_density", "bs"), ("arbnet_density", "arbnet_bump")]:
+                 ("arbnet_density", "bs"), ("arbnet_density", "arbnet_bump"),
+                 ("arbnet_density_skew", "arbnet_density"),
+                 ("arbnet_density_skew", "ackerer"),
+                 ("arbnet_density_skew", "bs"),
+                 ("arbnet_density_skew", "arbnet_bump")]:
         if a in present and b in present:
             dm_tests[f"{a}_vs_{b}"] = _dm(a, b)
 
@@ -1003,7 +1050,8 @@ def main():
     p.add_argument("--max_days", type=int, default=0,
                    help="cap number of days (0 = all available bhavcopies, the default)")
     p.add_argument("--models", nargs="+", default=["arbnet", "ackerer", "bs"],
-                   choices=["arbnet", "ackerer", "bs", "arbnet_bump", "ackerer_matched", "arbnet_density"])
+                   choices=["arbnet", "ackerer", "bs", "arbnet_bump", "ackerer_matched",
+                            "arbnet_density", "arbnet_density_skew"])
     p.add_argument("--resume", action="store_true",
                    help="merge into an existing --out file: reuse already-computed "
                         "(date, model) records and only train the missing models "

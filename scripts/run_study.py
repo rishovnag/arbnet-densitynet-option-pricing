@@ -309,6 +309,33 @@ def run_study(
                 _store(rec_c)
                 msg["BS"] = f"BS RMSE={rec_c['price_rmse']:.2f}"
 
+            # DensityNet with the SKEW CLOCK (v4): m_i(T) = 1 + h(T)(m_i - 1)
+            if _todo("ArbNet_density_skew"):
+                dnet_s = DensityNet(DensityNetConfig(context_dim=0, n_components=8,
+                                                     skew_clock=True))
+                cfg_ds = RunConfig(seed=seed, n_epochs=n_epochs, batch_size=64, lr=1e-2, lambda_iv=0.0)
+                train_pricer(dnet_s, feats, cfg_ds, verbose=False)
+                rec_ds = _evaluate_one(dnet_s, feats, K_grid_eval, T_grid, filtered, name="ArbNet_density_skew")
+                adv = adversarial_arbitrage_report(
+                    dnet_s, S=float(filtered.spot), r=float(filtered.risk_free_rate),
+                    q=float(filtered.dividend_yield), T_grid=T_grid.double(),
+                    n_base=400, n_refine=400)
+                rec_ds.update({"adv_butterfly_count": adv.butterfly_count,
+                               "adv_calendar_count": adv.calendar_count,
+                               "adv_calendar_strike_count": adv.calendar_strike_count,
+                               "adv_a4_count": adv.a4_count,
+                               "adv_butterfly_worst": adv.butterfly_worst})
+                try:
+                    diag = dnet_s.mixture_diagnostics(None)
+                    rec_ds.update({f"density_{k}": float(v) for k, v in diag.items()})
+                except Exception:
+                    pass
+                rec_ds.update(_hedge_eval(dnet_s, filtered, seed=seed))
+                _store(rec_ds)
+                msg["ArbNet_density_skew"] = (f"ArbNet_density_skew RMSE={rec_ds['price_rmse']:.2f} "
+                                              f"adv_bfly={adv.butterfly_count}")
+
+
             if msg:
                 print(f"  seed {seed}: " + "  ".join(msg[m] for m in models if m in msg))
 
@@ -381,7 +408,8 @@ def main():
     p.add_argument("--n_epochs", type=int, default=150)
     p.add_argument("--out", type=str, default="results/study.json")
     p.add_argument("--models", nargs="+", default=["ArbNet", "Ackerer", "BS"],
-                   choices=["ArbNet", "Ackerer", "BS", "ArbNet_bump", "Ackerer_matched", "ArbNet_density"])
+                   choices=["ArbNet", "Ackerer", "BS", "ArbNet_bump", "Ackerer_matched",
+                            "ArbNet_density", "ArbNet_density_skew"])
     p.add_argument("--resume", action="store_true",
                    help="merge into an existing --out file: reuse already-computed "
                         "(surface, seed, model) records and only train missing models")
