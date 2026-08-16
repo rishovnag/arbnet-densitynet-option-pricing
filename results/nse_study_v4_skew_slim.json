@@ -1,0 +1,547 @@
+{
+ "data": "NSE Nifty 50 F&O bhavcopy (real)",
+ "claim_scope": "ArbNet is architecturally free of butterfly (A1) and calendar (A2) static arbitrage for every weight vector and context (Theorem 4.1) -- see guaranteed_* fields. The Roger Lee wing/tail bound is MONITORED (monitored_tail_rate_*) but NOT architecturally enforced; treat tail violations as a diagnostic, not a breach of the guarantee.",
+ "params": {
+  "n_days_requested": 1359,
+  "n_days_used": 1359,
+  "models": [
+   "arbnet",
+   "ackerer",
+   "bs",
+   "ackerer_matched",
+   "arbnet_density",
+   "arbnet_bump",
+   "arbnet_density_skew"
+  ],
+  "models_requested": [
+   "arbnet",
+   "ackerer",
+   "bs",
+   "ackerer_matched",
+   "arbnet_density",
+   "arbnet_bump",
+   "arbnet_density_skew"
+  ],
+  "n_epochs": 150,
+  "seed": 0,
+  "use_context": true,
+  "holdout": "odd_even",
+  "save_params": "results/params_v3",
+  "resume": true,
+  "n_records_reused": 0,
+  "n_records_trained": 9513
+ },
+ "context_features": [
+  "india_vix",
+  "banknifty_iv",
+  "realized_vol_1w",
+  "usdinr",
+  "fii_net_cr",
+  "dii_net_cr",
+  "cpi_inflation",
+  "wpi_inflation",
+  "iip_growth",
+  "days_to_macro_event"
+ ],
+ "data_sources": {
+  "india_vix_rows": 1465,
+  "banknifty_iv_days": 1359,
+  "realized_vol_rows": 1473,
+  "usdinr_rows": 1565,
+  "fii_dii_rows": 1476,
+  "cpi_rows": 82,
+  "wpi_rows": 76,
+  "iip_rows": 86,
+  "macro_calendar_events": 312
+ },
+ "data_quality": {
+  "n_requested": 1359,
+  "n_used": 1359,
+  "n_skipped": 0,
+  "skipped_days": [],
+  "rate_div_fallbacks": {
+   "rate_default": 0,
+   "rate_prehistory": 0,
+   "div_default": 0,
+   "div_prehistory": 0
+  }
+ },
+ "macro_lag_mode": "true_release_dates",
+ "wall_time": 74029.2178530693,
+ "n_records": 9513,
+ "aggregate": {
+  "arbnet": {
+   "n_days": 1359,
+   "price_rmse_mean": 96.76557819346806,
+   "price_rmse_std": 27.98421405120718,
+   "iv_rmse_mean": 0.09547812803603868,
+   "vega_weighted_rmse_mean": 0.49607330991052545,
+   "price_rmse_insample_mean": 94.97720805681129,
+   "iv_rmse_insample_mean": 0.09470231382887621,
+   "vega_weighted_rmse_insample_mean": 0.5162863642706469,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.0,
+   "guaranteed_butterfly_rate_max": 0.0,
+   "guaranteed_calendar_rate_mean": 0.0,
+   "guaranteed_calendar_rate_max": 0.0,
+   "guaranteed_violation_days": 0,
+   "monitored_tail_rate_mean": 0.001324503311258278,
+   "monitored_tail_rate_max": 0.2,
+   "full_mono_inband_days": 924,
+   "full_digital_inband_days": 435,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 0,
+   "full_clean_everywhere_days": 0,
+   "full_boundary_gap_rel_worst_max": 0.33347012340480126,
+   "full_first_bite_K_over_S_min": 1.0030000000000001,
+   "hedge_std_mean": 175.852584619191,
+   "hedge_cvar95_mean": 728.2721870949182,
+   "hedge_n_valid": 1359,
+   "price_rmse_ci95": [
+    92.90307672695697,
+    100.73727899190692
+   ],
+   "price_rmse_ci95_iid": [
+    95.3104046086865,
+    98.21852806314465
+   ],
+   "hedge_std_ci95": [
+    168.12439602730902,
+    183.2791083753245
+   ],
+   "hedge_cvar95_ci95": [
+    693.3633023517677,
+    760.9900628065152
+   ]
+  },
+  "ackerer": {
+   "n_days": 1359,
+   "price_rmse_mean": 43.62015121293647,
+   "price_rmse_std": 23.25904861396999,
+   "iv_rmse_mean": 0.06464825029333476,
+   "vega_weighted_rmse_mean": 0.06659710676031703,
+   "price_rmse_insample_mean": 35.36317660406813,
+   "iv_rmse_insample_mean": 0.061379239956812,
+   "vega_weighted_rmse_insample_mean": 0.05606237973200981,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.024588311968738754,
+   "guaranteed_butterfly_rate_max": 0.25384615384615383,
+   "guaranteed_calendar_rate_mean": 0.010715183074252692,
+   "guaranteed_calendar_rate_max": 0.19817073170731708,
+   "guaranteed_violation_days": 726,
+   "monitored_tail_rate_mean": 0.004893609170651113,
+   "monitored_tail_rate_max": 0.5,
+   "full_mono_inband_days": 302,
+   "full_digital_inband_days": 1020,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 264,
+   "full_clean_everywhere_days": 57,
+   "full_boundary_gap_rel_worst_max": 0.0,
+   "full_first_bite_K_over_S_min": 0.11081876556150141,
+   "hedge_std_mean": 125.49369734309528,
+   "hedge_cvar95_mean": 342.6952034491397,
+   "hedge_n_valid": 1343,
+   "price_rmse_ci95": [
+    40.86744415624515,
+    46.33241980026713
+   ],
+   "price_rmse_ci95_iid": [
+    42.43522862604736,
+    44.79406365575029
+   ],
+   "hedge_std_ci95": [
+    120.87083820981354,
+    129.99873264656856
+   ],
+   "hedge_cvar95_ci95": [
+    310.73120183831793,
+    371.0073822240015
+   ]
+  },
+  "bs": {
+   "n_days": 1359,
+   "price_rmse_mean": 41.07909782850365,
+   "price_rmse_std": 19.0815853406898,
+   "iv_rmse_mean": 0.063109144485522,
+   "vega_weighted_rmse_mean": 0.052551602479413075,
+   "price_rmse_insample_mean": 38.90804623820661,
+   "iv_rmse_insample_mean": 0.06272222083527937,
+   "vega_weighted_rmse_insample_mean": 0.052292656897676176,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.0,
+   "guaranteed_butterfly_rate_max": 0.0,
+   "guaranteed_calendar_rate_mean": 0.0,
+   "guaranteed_calendar_rate_max": 0.0,
+   "guaranteed_violation_days": 0,
+   "monitored_tail_rate_mean": 0.0,
+   "monitored_tail_rate_max": 0.0,
+   "full_mono_inband_days": 0,
+   "full_digital_inband_days": 0,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 1359,
+   "full_clean_everywhere_days": 1359,
+   "full_boundary_gap_rel_worst_max": -0.0009829850441718275,
+   "full_first_bite_K_over_S_min": NaN,
+   "hedge_std_mean": 124.26338690270974,
+   "hedge_cvar95_mean": 323.8711873579262,
+   "hedge_n_valid": 1359,
+   "price_rmse_ci95": [
+    38.599188720662426,
+    43.59565324771044
+   ],
+   "price_rmse_ci95_iid": [
+    40.092305890719096,
+    42.019963443410845
+   ],
+   "hedge_std_ci95": [
+    119.73144192186962,
+    128.73168474372977
+   ],
+   "hedge_cvar95_ci95": [
+    293.5267120724213,
+    351.7349749830236
+   ]
+  },
+  "ackerer_matched": {
+   "n_days": 1359,
+   "price_rmse_mean": 79.71280296485682,
+   "price_rmse_std": 57.4548140348296,
+   "iv_rmse_mean": 0.1007673133765409,
+   "vega_weighted_rmse_mean": 0.0825785987553371,
+   "price_rmse_insample_mean": 74.97953032745518,
+   "iv_rmse_insample_mean": 0.0989616144136022,
+   "vega_weighted_rmse_insample_mean": 0.08089369327252055,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.0012802843192835833,
+   "guaranteed_butterfly_rate_max": 0.12454212454212454,
+   "guaranteed_calendar_rate_mean": 0.0048177404931833406,
+   "guaranteed_calendar_rate_max": 0.18157181571815717,
+   "guaranteed_violation_days": 165,
+   "monitored_tail_rate_mean": 0.00041784925890886156,
+   "monitored_tail_rate_max": 0.125,
+   "full_mono_inband_days": 31,
+   "full_digital_inband_days": 231,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 1114,
+   "full_clean_everywhere_days": 479,
+   "full_boundary_gap_rel_worst_max": 0.0,
+   "full_first_bite_K_over_S_min": 0.0042006842220982275,
+   "hedge_std_mean": 125.17935687995211,
+   "hedge_cvar95_mean": 318.74368556669776,
+   "hedge_n_valid": 978,
+   "price_rmse_ci95": [
+    75.15801673696882,
+    84.23068566487237
+   ],
+   "price_rmse_ci95_iid": [
+    76.76427094231116,
+    82.8573139639792
+   ],
+   "hedge_std_ci95": [
+    119.84416030589541,
+    130.5633154465708
+   ],
+   "hedge_cvar95_ci95": [
+    282.00341552379564,
+    352.48394298840554
+   ]
+  },
+  "arbnet_density": {
+   "n_days": 1359,
+   "price_rmse_mean": 38.98725076034018,
+   "price_rmse_std": 20.336413831661062,
+   "iv_rmse_mean": 0.07486942256687756,
+   "vega_weighted_rmse_mean": 0.23994848545095207,
+   "price_rmse_insample_mean": 34.177094264447994,
+   "iv_rmse_insample_mean": 0.07259631634095713,
+   "vega_weighted_rmse_insample_mean": 0.2340835068536603,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.0,
+   "guaranteed_butterfly_rate_max": 0.0,
+   "guaranteed_calendar_rate_mean": 0.0,
+   "guaranteed_calendar_rate_max": 0.0,
+   "guaranteed_violation_days": 0,
+   "monitored_tail_rate_mean": 0.0,
+   "monitored_tail_rate_max": 0.0,
+   "full_mono_inband_days": 0,
+   "full_digital_inband_days": 0,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 1359,
+   "full_clean_everywhere_days": 1359,
+   "full_boundary_gap_rel_worst_max": -0.0009829850441718275,
+   "full_first_bite_K_over_S_min": NaN,
+   "hedge_std_mean": 125.54821219998085,
+   "hedge_cvar95_mean": 349.8720071913561,
+   "hedge_n_valid": 1359,
+   "density_V_m_mean": 0.010635370229667054,
+   "density_V_m_median": 0.008115525357425213,
+   "density_V_m_p90": 0.02135561108589173,
+   "price_rmse_ci95": [
+    36.38565130423236,
+    41.77933452313573
+   ],
+   "price_rmse_ci95_iid": [
+    37.945409446046845,
+    40.01553135879607
+   ],
+   "hedge_std_ci95": [
+    120.77283180386011,
+    130.18935812037205
+   ],
+   "hedge_cvar95_ci95": [
+    318.19638941841663,
+    379.0535313567784
+   ]
+  },
+  "arbnet_bump": {
+   "n_days": 1359,
+   "price_rmse_mean": 50.54059558514728,
+   "price_rmse_std": 19.122668163026237,
+   "iv_rmse_mean": 0.05582568731715435,
+   "vega_weighted_rmse_mean": 0.18535936447141405,
+   "price_rmse_insample_mean": 46.43228339938402,
+   "iv_rmse_insample_mean": 0.05446198457650528,
+   "vega_weighted_rmse_insample_mean": 0.19290670052834125,
+   "adv_butterfly_days": 1359,
+   "adv_calendar_fwd_days": 13,
+   "adv_calendar_strike_days": 10,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.11546079149096072,
+   "guaranteed_butterfly_rate_max": 0.5356125356125356,
+   "guaranteed_calendar_rate_mean": 0.000144225688025828,
+   "guaranteed_calendar_rate_max": 0.056910569105691054,
+   "guaranteed_violation_days": 1359,
+   "monitored_tail_rate_mean": 3.679175864606328e-05,
+   "monitored_tail_rate_max": 0.05,
+   "full_mono_inband_days": 440,
+   "full_digital_inband_days": 924,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 2,
+   "full_clean_everywhere_days": 0,
+   "full_boundary_gap_rel_worst_max": 2.4267724241449944,
+   "full_first_bite_K_over_S_min": 1.0030000000000001,
+   "hedge_std_mean": 139.54788583630653,
+   "hedge_cvar95_mean": 526.8182119468287,
+   "hedge_n_valid": 1359,
+   "price_rmse_ci95": [
+    47.96744321131198,
+    53.06243051189636
+   ],
+   "price_rmse_ci95_iid": [
+    49.52949330834802,
+    51.51203702208397
+   ],
+   "hedge_std_ci95": [
+    133.32055338177457,
+    145.6927722256256
+   ],
+   "hedge_cvar95_ci95": [
+    494.0738032914091,
+    557.1536125695246
+   ]
+  },
+  "arbnet_density_skew": {
+   "n_days": 1359,
+   "price_rmse_mean": 37.6966954131965,
+   "price_rmse_std": 20.92380024611066,
+   "iv_rmse_mean": 0.058262720673925475,
+   "vega_weighted_rmse_mean": 0.05132901481256119,
+   "price_rmse_insample_mean": 31.968341243538987,
+   "iv_rmse_insample_mean": 0.05604976386166259,
+   "vega_weighted_rmse_insample_mean": 0.049326803336486036,
+   "adv_butterfly_days": 0,
+   "adv_calendar_fwd_days": 0,
+   "adv_calendar_strike_days": 0,
+   "adv_a4_days": 0,
+   "guaranteed_butterfly_rate_mean": 0.0,
+   "guaranteed_butterfly_rate_max": 0.0,
+   "guaranteed_calendar_rate_mean": 0.0,
+   "guaranteed_calendar_rate_max": 0.0,
+   "guaranteed_violation_days": 0,
+   "monitored_tail_rate_mean": 0.0,
+   "monitored_tail_rate_max": 0.0,
+   "full_mono_inband_days": 0,
+   "full_digital_inband_days": 0,
+   "full_upper_inband_days": 0,
+   "full_clean_inband_days": 1359,
+   "full_clean_everywhere_days": 1359,
+   "full_boundary_gap_rel_worst_max": -0.0009829850441716481,
+   "full_first_bite_K_over_S_min": NaN,
+   "hedge_std_mean": 125.75279239388098,
+   "hedge_cvar95_mean": 353.6416920022639,
+   "hedge_n_valid": 1359,
+   "density_V_m_mean": 0.023427677188957885,
+   "density_V_m_median": 0.012851012870669365,
+   "density_V_m_p90": 0.055396623909473426,
+   "density_beta_median": 10.359607696533203,
+   "density_h_1w_median": 0.18007421493530273,
+   "price_rmse_ci95": [
+    35.05983912729884,
+    40.54321752992336
+   ],
+   "price_rmse_ci95_iid": [
+    36.61367233667942,
+    38.7644240735514
+   ],
+   "hedge_std_ci95": [
+    120.93019994696537,
+    130.50820665916964
+   ],
+   "hedge_cvar95_ci95": [
+    321.37266015707485,
+    382.92948041724117
+   ]
+  }
+ },
+ "paired_test": {
+  "n_pairs": 1359,
+  "mean_diff_arbnet_minus_ackerer": 53.145426980531596,
+  "std_diff": 27.472024037585,
+  "t_stat": 71.3156707328356
+ },
+ "diebold_mariano": {
+  "arbnet_vs_ackerer": {
+   "dm_stat": 29.128075993615454,
+   "p_value": 0.0,
+   "mean_loss_diff": 53.145426980531596,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet has higher price RMSE than ackerer"
+  },
+  "arbnet_vs_bs": {
+   "dm_stat": 31.00805201692147,
+   "p_value": 0.0,
+   "mean_loss_diff": 55.68648036496441,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet has higher price RMSE than bs"
+  },
+  "arbnet_bump_vs_arbnet": {
+   "dm_stat": -36.286038780941716,
+   "p_value": 0.0,
+   "mean_loss_diff": -46.224982608320786,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_bump has higher price RMSE than arbnet"
+  },
+  "arbnet_bump_vs_ackerer": {
+   "dm_stat": 10.056690102003351,
+   "p_value": 0.0,
+   "mean_loss_diff": 6.920444372210808,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_bump has higher price RMSE than ackerer"
+  },
+  "arbnet_bump_vs_bs": {
+   "dm_stat": 15.448584257001441,
+   "p_value": 0.0,
+   "mean_loss_diff": 9.461497756643626,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_bump has higher price RMSE than bs"
+  },
+  "ackerer_matched_vs_arbnet": {
+   "dm_stat": -6.867788802450936,
+   "p_value": 6.520561868228469e-12,
+   "mean_loss_diff": -17.052775228611242,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => ackerer_matched has higher price RMSE than arbnet"
+  },
+  "ackerer_matched_vs_ackerer": {
+   "dm_stat": 20.721478863134543,
+   "p_value": 0.0,
+   "mean_loss_diff": 36.09265175192035,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => ackerer_matched has higher price RMSE than ackerer"
+  },
+  "ackerer_matched_vs_bs": {
+   "dm_stat": 22.41336863602211,
+   "p_value": 0.0,
+   "mean_loss_diff": 38.633705136353164,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => ackerer_matched has higher price RMSE than bs"
+  },
+  "arbnet_density_vs_arbnet": {
+   "dm_stat": -32.97835586774742,
+   "p_value": 0.0,
+   "mean_loss_diff": -57.77832743312788,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density has higher price RMSE than arbnet"
+  },
+  "arbnet_density_vs_ackerer": {
+   "dm_stat": -12.084664858113296,
+   "p_value": 0.0,
+   "mean_loss_diff": -4.632900452596287,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density has higher price RMSE than ackerer"
+  },
+  "arbnet_density_vs_bs": {
+   "dm_stat": -9.534578281772518,
+   "p_value": 0.0,
+   "mean_loss_diff": -2.0918470681634695,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density has higher price RMSE than bs"
+  },
+  "arbnet_density_vs_arbnet_bump": {
+   "dm_stat": -19.72536200290789,
+   "p_value": 0.0,
+   "mean_loss_diff": -11.553344824807095,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density has higher price RMSE than arbnet_bump"
+  },
+  "arbnet_density_skew_vs_arbnet_density": {
+   "dm_stat": -8.629292659234377,
+   "p_value": 0.0,
+   "mean_loss_diff": -1.2905553471436826,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density_skew has higher price RMSE than arbnet_density"
+  },
+  "arbnet_density_skew_vs_ackerer": {
+   "dm_stat": -15.118973573569582,
+   "p_value": 0.0,
+   "mean_loss_diff": -5.92345579973997,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density_skew has higher price RMSE than ackerer"
+  },
+  "arbnet_density_skew_vs_bs": {
+   "dm_stat": -12.706398807256662,
+   "p_value": 0.0,
+   "mean_loss_diff": -3.382402415307152,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density_skew has higher price RMSE than bs"
+  },
+  "arbnet_density_skew_vs_arbnet_bump": {
+   "dm_stat": -23.40241985506472,
+   "p_value": 0.0,
+   "mean_loss_diff": -12.843900171950777,
+   "hac_lag": 7,
+   "n": 1359,
+   "note": "positive dm_stat => arbnet_density_skew has higher price RMSE than arbnet_bump"
+  }
+ }
+}

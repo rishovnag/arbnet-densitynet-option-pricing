@@ -1,0 +1,346 @@
+{
+ "ctx": {
+  "price:arbnet_density_skew_vs_arbnet": {
+   "dm": -34.43,
+   "p": "0.00e+00",
+   "meandiff": -59.0689,
+   "n": 1359,
+   "mean1": 37.6967,
+   "mean2": 96.7656,
+   "frac1lower": 1.0
+  },
+  "price:skew_vs_bs": {
+   "dm": -12.71,
+   "p": "0.00e+00",
+   "meandiff": -3.3824,
+   "n": 1359,
+   "mean1": 37.6967,
+   "mean2": 41.0791,
+   "frac1lower": 0.791
+  },
+  "price:skew_vs_density": {
+   "dm": -8.63,
+   "p": "0.00e+00",
+   "meandiff": -1.2906,
+   "n": 1359,
+   "mean1": 37.6967,
+   "mean2": 38.9873,
+   "frac1lower": 0.723
+  },
+  "price:skew_vs_ackerer": {
+   "dm": -15.12,
+   "p": "0.00e+00",
+   "meandiff": -5.9235,
+   "n": 1359,
+   "mean1": 37.6967,
+   "mean2": 43.6202,
+   "frac1lower": 0.756
+  },
+  "iv_rmse:arbnet_density_skew_vs_bs": {
+   "dm": -5.6,
+   "p": "2.20e-08",
+   "meandiff": -0.0048,
+   "n": 1359,
+   "mean1": 0.0583,
+   "mean2": 0.0631,
+   "frac1lower": 0.689
+  },
+  "iv_rmse:arbnet_density_skew_vs_ackerer": {
+   "dm": -7.49,
+   "p": "6.91e-14",
+   "meandiff": -0.0064,
+   "n": 1359,
+   "mean1": 0.0583,
+   "mean2": 0.0646,
+   "frac1lower": 0.656
+  },
+  "iv_rmse:arbnet_density_skew_vs_arbnet_density": {
+   "dm": -19.68,
+   "p": "0.00e+00",
+   "meandiff": -0.0166,
+   "n": 1359,
+   "mean1": 0.0583,
+   "mean2": 0.0749,
+   "frac1lower": 0.757
+  },
+  "iv_rmse:arbnet_density_vs_ackerer": {
+   "dm": 10.44,
+   "p": "0.00e+00",
+   "meandiff": 0.0102,
+   "n": 1359,
+   "mean1": 0.0749,
+   "mean2": 0.0646,
+   "frac1lower": 0.397
+  },
+  "iv_rmse:ackerer_vs_bs": {
+   "dm": 1.66,
+   "p": "9.61e-02",
+   "meandiff": 0.0015,
+   "n": 1359,
+   "mean1": 0.0646,
+   "mean2": 0.0631,
+   "frac1lower": 0.519
+  },
+  "iv_rmse:arbnet_density_skew_vs_arbnet_bump": {
+   "dm": 1.69,
+   "p": "9.05e-02",
+   "meandiff": 0.0024,
+   "n": 1359,
+   "mean1": 0.0583,
+   "mean2": 0.0558,
+   "frac1lower": 0.506
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_bs": {
+   "dm": -1.2,
+   "p": "2.29e-01",
+   "meandiff": -0.0012,
+   "n": 1359,
+   "mean1": 0.0513,
+   "mean2": 0.0526,
+   "frac1lower": 0.776
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_ackerer": {
+   "dm": -3.76,
+   "p": "1.68e-04",
+   "meandiff": -0.0153,
+   "n": 1359,
+   "mean1": 0.0513,
+   "mean2": 0.0666,
+   "frac1lower": 0.663
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_arbnet_density": {
+   "dm": -33.0,
+   "p": "0.00e+00",
+   "meandiff": -0.1886,
+   "n": 1359,
+   "mean1": 0.0513,
+   "mean2": 0.2399,
+   "frac1lower": 0.971
+  },
+  "vega_weighted_rmse:arbnet_density_vs_ackerer": {
+   "dm": 25.01,
+   "p": "0.00e+00",
+   "meandiff": 0.1734,
+   "n": 1359,
+   "mean1": 0.2399,
+   "mean2": 0.0666,
+   "frac1lower": 0.049
+  },
+  "vega_weighted_rmse:ackerer_vs_bs": {
+   "dm": 3.36,
+   "p": "7.80e-04",
+   "meandiff": 0.014,
+   "n": 1359,
+   "mean1": 0.0666,
+   "mean2": 0.0526,
+   "frac1lower": 0.577
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_arbnet_bump": {
+   "dm": -7.82,
+   "p": "5.33e-15",
+   "meandiff": -0.134,
+   "n": 1359,
+   "mean1": 0.0513,
+   "mean2": 0.1854,
+   "frac1lower": 0.987
+  },
+  "yearly_price": {
+   "arbnet": {
+    "2019": 63.09,
+    "2020": 102.88,
+    "2021": 118.52,
+    "2022": 116.13,
+    "2023": 79.16,
+    "2024": 103.37
+   },
+   "ackerer": {
+    "2019": 24.24,
+    "2020": 34.89,
+    "2021": 58.95,
+    "2022": 45.18,
+    "2023": 55.2,
+    "2024": 42.85
+   },
+   "bs": {
+    "2019": 24.44,
+    "2020": 33.28,
+    "2021": 55.58,
+    "2022": 42.66,
+    "2023": 49.33,
+    "2024": 41.19
+   },
+   "arbnet_density_skew": {
+    "2019": 18.8,
+    "2020": 30.27,
+    "2021": 54.14,
+    "2022": 41.01,
+    "2023": 44.65,
+    "2024": 36.74
+   }
+  }
+ },
+ "noctx": {
+  "price:arbnet_density_skew_vs_arbnet": {
+   "dm": -33.36,
+   "p": "0.00e+00",
+   "meandiff": -58.3483,
+   "n": 1359,
+   "mean1": 37.5773,
+   "mean2": 95.9256,
+   "frac1lower": 0.999
+  },
+  "price:skew_vs_bs": {
+   "dm": -14.58,
+   "p": "0.00e+00",
+   "meandiff": -3.5018,
+   "n": 1359,
+   "mean1": 37.5773,
+   "mean2": 41.0791,
+   "frac1lower": 0.811
+  },
+  "price:skew_vs_density": {
+   "dm": -13.63,
+   "p": "0.00e+00",
+   "meandiff": -2.1983,
+   "n": 1359,
+   "mean1": 37.5773,
+   "mean2": 39.7756,
+   "frac1lower": 0.803
+  },
+  "price:skew_vs_ackerer": {
+   "dm": -16.12,
+   "p": "0.00e+00",
+   "meandiff": -6.0429,
+   "n": 1359,
+   "mean1": 37.5773,
+   "mean2": 43.6202,
+   "frac1lower": 0.758
+  },
+  "iv_rmse:arbnet_density_skew_vs_bs": {
+   "dm": -1.91,
+   "p": "5.61e-02",
+   "meandiff": -0.0018,
+   "n": 1359,
+   "mean1": 0.0613,
+   "mean2": 0.0631,
+   "frac1lower": 0.636
+  },
+  "iv_rmse:arbnet_density_skew_vs_ackerer": {
+   "dm": -4.12,
+   "p": "3.72e-05",
+   "meandiff": -0.0034,
+   "n": 1359,
+   "mean1": 0.0613,
+   "mean2": 0.0646,
+   "frac1lower": 0.589
+  },
+  "iv_rmse:arbnet_density_skew_vs_arbnet_density": {
+   "dm": -15.98,
+   "p": "0.00e+00",
+   "meandiff": -0.0142,
+   "n": 1359,
+   "mean1": 0.0613,
+   "mean2": 0.0755,
+   "frac1lower": 0.79
+  },
+  "iv_rmse:arbnet_density_vs_ackerer": {
+   "dm": 11.01,
+   "p": "0.00e+00",
+   "meandiff": 0.0108,
+   "n": 1359,
+   "mean1": 0.0755,
+   "mean2": 0.0646,
+   "frac1lower": 0.316
+  },
+  "iv_rmse:ackerer_vs_bs": {
+   "dm": 1.66,
+   "p": "9.61e-02",
+   "meandiff": 0.0015,
+   "n": 1359,
+   "mean1": 0.0646,
+   "mean2": 0.0631,
+   "frac1lower": 0.519
+  },
+  "iv_rmse:arbnet_density_skew_vs_arbnet_bump": "division by zero",
+  "vega_weighted_rmse:arbnet_density_skew_vs_bs": {
+   "dm": -2.77,
+   "p": "5.65e-03",
+   "meandiff": -0.0031,
+   "n": 1359,
+   "mean1": 0.0494,
+   "mean2": 0.0526,
+   "frac1lower": 0.844
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_ackerer": {
+   "dm": -4.12,
+   "p": "3.84e-05",
+   "meandiff": -0.0172,
+   "n": 1359,
+   "mean1": 0.0494,
+   "mean2": 0.0666,
+   "frac1lower": 0.701
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_arbnet_density": {
+   "dm": -12.8,
+   "p": "0.00e+00",
+   "meandiff": -0.07,
+   "n": 1359,
+   "mean1": 0.0494,
+   "mean2": 0.1194,
+   "frac1lower": 0.878
+  },
+  "vega_weighted_rmse:arbnet_density_vs_ackerer": {
+   "dm": 7.95,
+   "p": "1.78e-15",
+   "meandiff": 0.0528,
+   "n": 1359,
+   "mean1": 0.1194,
+   "mean2": 0.0666,
+   "frac1lower": 0.277
+  },
+  "vega_weighted_rmse:ackerer_vs_bs": {
+   "dm": 3.36,
+   "p": "7.80e-04",
+   "meandiff": 0.014,
+   "n": 1359,
+   "mean1": 0.0666,
+   "mean2": 0.0526,
+   "frac1lower": 0.577
+  },
+  "vega_weighted_rmse:arbnet_density_skew_vs_arbnet_bump": "division by zero",
+  "yearly_price": {
+   "arbnet": {
+    "2019": 62.81,
+    "2020": 102.06,
+    "2021": 117.26,
+    "2022": 115.26,
+    "2023": 78.35,
+    "2024": 102.23
+   },
+   "ackerer": {
+    "2019": 24.24,
+    "2020": 34.89,
+    "2021": 58.95,
+    "2022": 45.18,
+    "2023": 55.2,
+    "2024": 42.85
+   },
+   "bs": {
+    "2019": 24.44,
+    "2020": 33.28,
+    "2021": 55.58,
+    "2022": 42.66,
+    "2023": 49.33,
+    "2024": 41.19
+   },
+   "arbnet_density_skew": {
+    "2019": 19.33,
+    "2020": 29.61,
+    "2021": 53.42,
+    "2022": 40.66,
+    "2023": 45.21,
+    "2024": 36.74
+   }
+  }
+ }
+}
